@@ -1066,14 +1066,123 @@ html, body {
   letter-spacing: 1px;
 }
 
+/* ── Mobile (≤ 640px) ─────────────────────────────────── */
 @media (max-width: 640px) {
-  .grab-btn { width: 96px; height: 96px; font-size: 22px; }
-  .cam-btn { padding: 5px 8px; font-size: 11px; }
-  .plays-counter { min-width: 110px; padding: 8px 12px; }
-  .plays-counter .value { font-size: 18px; }
-  .hud-bottom-center { bottom: calc(8px + var(--safe-bottom)); }
-  .dpad { grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(3, 46px); }
-  .dpad-btn { font-size: 15px; }
-  .brand-title { font-size: 18px; }
-  .brand-line { font-size: 10px; letter-spacing: 3px; }
+  .hud-top-left  { top: calc(10px + var(--safe-top)); left: 10px; }
+  .hud-top-right { top: calc(10px + var(--safe-top)); right: 10px; gap: 6px; }
+  .hud-bottom-left { bottom: calc(14px + var(--safe-bottom)); left: 10px; gap: 6px; }
+  .hud-bottom-center { bottom: calc(10px + var(--safe-bottom)); }
+
+  .grab-btn { width: 92px; height: 92px; font-size: 20px; border-width: 3px; }
+
+  .plays-counter { min-width: 100px; padding: 7px 10px; gap: 1px; }
+  .plays-counter .label { font-size: 10px; letter-spacing: 0.5px; }
+  .plays-counter .value { font-size: 17px; }
+  .refill-btn { padding: 3px 7px; font-size: 10px; }
+
+  .status { padding: 6px 10px; font-size: 11px; }
+
+  .icon-btn { width: 40px; height: 40px; font-size: 17px; border-width: 2.5px; box-shadow: 0 3px 0 var(--c-ink); }
+  .icon-btn:active { box-shadow: 0 1px 0 var(--c-ink); }
+
+  .camera-presets { padding: 4px; gap: 2px; border-width: 2.5px; }
+  .cam-btn { padding: 5px 7px; font-size: 10px; }
+  .camera-extras .cam-btn { padding: 6px 9px; font-size: 11px; }
+
+  .dpad {
+    grid-template-columns: repeat(3, 46px);
+    grid-template-rows: repeat(3, 46px);
+    gap: 3px;
+    right: 10px;
+  }
+  .dpad-btn { font-size: 14px; border-width: 2.5px; }
+
+  .brand-title { font-size: 16px; letter-spacing: 1.5px; }
+  .brand-line { font-size: 9px; letter-spacing: 2px; margin-bottom: 2px; }
+
+  .modal-card { padding: 18px 16px; border-radius: 20px; border-width: 3px; }
+  .modal-card h2 { font-size: 18px; }
+
+  .collection-grid { grid-template-columns: repeat(auto-fill, minmax(94px, 1fr)); gap: 8px; }
+  .card .card-art { width: 56px; height: 56px; font-size: 28px; }
+  .card-name { font-size: 11px; }
+}
+
+/* ── Phone (≤ 480px) — 진짜 작은 화면 ──────────────────── */
+@media (max-width: 480px) {
+  .brand { display: none; } /* 상단 중앙 브랜드는 숨김 (좁은 화면에서 충돌 방지) */
+
+  .grab-btn { width: 84px; height: 84px; font-size: 18px; }
+
+  .plays-counter { min-width: 90px; padding: 6px 9px; }
+  .plays-counter .value { font-size: 15px; }
+
+  .icon-btn { width: 38px; height: 38px; font-size: 15px; }
+
+  /* 좌하단 카메라 프리셋: 압축 모드 — 축약 라벨 */
+  .camera-presets { padding: 3px; }
+  .cam-btn { padding: 4px 6px; font-size: 10px; }
+  /* "내 앵글" / "자동회전" 등 보조 버튼을 한 줄에 자연스럽게 wrap 되도록 */
+  .camera-extras { max-width: 200px; }
+  .camera-extras .cam-btn { padding: 5px 8px; font-size: 10px; }
+
+  .dpad {
+    grid-template-columns: repeat(3, 42px);
+    grid-template-rows: repeat(3, 42px);
+    gap: 3px;
+  }
+  .dpad-btn { font-size: 13px; }
+
+  .modal-card { width: 96vw; padding: 16px 14px; border-radius: 18px; max-height: 92vh; }
+  .modal-card h2 { font-size: 16px; }
+
+  /* 인벤토리 탭 — 글자 작게, 패딩 줄임 */
+  .inv-tab { font-size: 11px; padding: 7px 4px; }
+  .inv-tab .tab-badge { font-size: 8px; padding: 1px 4px; }
+
+  .filter-btn { padding: 5px 10px; font-size: 11px; }
+
+  .reward-doll { width: 100px; height: 100px; font-size: 50px; }
+  .reward-btn { padding: 12px; font-size: 13px; }
+
+  .ticket-item, .mission-item { padding: 10px; gap: 10px; }
+  .ticket-emoji, .mission-emoji { width: 42px; height: 42px; font-size: 24px; }
+  .ticket-title, .mission-title { font-size: 13px; }
+  .ticket-sub, .mission-desc { font-size: 10px; }
+  .ticket-action { padding: 7px 10px; font-size: 11px; }
+
+  .achievements-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+  .achievement-card { padding: 10px 6px; }
+  .ach-emoji { font-size: 30px; }
+  .ach-title { font-size: 11px; }
+  .ach-desc { font-size: 9px; }
+
+  .settings-opt { min-width: 60px; padding: 9px 10px; font-size: 12px; }
+  .theme-options .settings-opt { min-width: 80px; }
+}
+
+/* ── 가로(landscape) 폰 — 세로 공간이 좁을 때 추가 ─────── */
+@media (max-height: 480px) and (max-width: 900px) {
+  .brand { display: none; }
+  .hud-top-left, .hud-top-right { top: calc(6px + var(--safe-top)); }
+  .hud-bottom-left, .hud-bottom-center { bottom: calc(6px + var(--safe-bottom)); }
+  .grab-btn { width: 76px; height: 76px; font-size: 16px; }
+  .dpad {
+    grid-template-columns: repeat(3, 40px);
+    grid-template-rows: repeat(3, 40px);
+  }
+  .dpad-btn { font-size: 12px; }
+  .plays-counter .label { font-size: 9px; }
+  .plays-counter .value { font-size: 14px; }
+  .status { font-size: 10px; padding: 4px 8px; }
+}
+
+/* ── 터치 디바이스 — 호버 효과 비활성화 (꿀럭임 방지) ──── */
+@media (hover: none) {
+  .icon-btn:hover,
+  .reward-btn:hover,
+  .filter-btn:hover,
+  .cam-btn:hover:not(.active),
+  .settings-opt:hover,
+  .grab-btn:hover { background: inherit; }
 }

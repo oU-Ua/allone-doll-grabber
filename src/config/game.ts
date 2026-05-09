@@ -26,9 +26,9 @@ export const CRANE = {
    * hub 에서 finger 끝(닫힌 상태) 까지 거리가 clawReach 이므로
    * bottomY ≥ clawReach 여야 fingers 가 바닥을 뚫지 않음.
    */
-  bottomY: 0.46,
+  bottomY: 0.50,
   /** Hub 중심에서 finger 끝(닫힌 상태)까지의 수직 거리 — 모션/배치 계산에 사용 */
-  clawReach: 0.40,
+  clawReach: 0.42,
   /** 마우스/터치 드래그 → 크레인 이동 비율. 1px 이동당 월드 유닛 */
   dragSensitivity: 0.0035,
   /** 크레인 부드러움 (lerp factor per frame at 60fps) */

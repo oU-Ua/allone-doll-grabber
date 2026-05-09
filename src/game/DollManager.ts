@@ -202,11 +202,13 @@ export class DollManager {
 
   /**
    * 잡힌 인형이 크레인을 따라 이동.
-   * clawTipY = 닫힌 finger 의 끝 (가장 아래) y 좌표. 인형 상단이 finger 끝에 살짝 잠기게 배치.
+   * clawTipY = 닫힌 finger 의 끝(가장 아래) y. 인형 중심을 정확히 이 높이에 둠.
+   *
+   * 효과: 클로 finger 들이 인형의 가운데(허리쯤)를 감싸안고 있는 모습.
+   * 인형 상단/하단이 finger 길이 안쪽에 들어와 시각적으로 finger 가 인형을 뚫지 않음.
    */
   followCrane(inst: DollInstance, cranePos: THREE.Vector3, clawTipY: number): void {
-    // 인형 상단 ≈ clawTipY + 약간 위 → 인형 중심 = clawTipY - halfY * 0.6 (살짝 깊게 물림)
-    const targetY = clawTipY - inst.halfExtents.y * 0.4;
+    const targetY = clawTipY;
     inst.body.position.set(cranePos.x, targetY, cranePos.z);
     inst.body.velocity.setZero();
     inst.body.angularVelocity.setZero();

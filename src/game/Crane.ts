@@ -83,9 +83,9 @@ export class Crane {
       roughness: 0.3,
     });
 
-    // ── Hub: 실린더 본체 ──
+    // ── Hub: 실린더 본체 (인형을 충분히 감쌀 수 있게 폭 확장) ──
     const hub = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.085, 0.10, 0.13, 28),
+      new THREE.CylinderGeometry(0.10, 0.13, 0.14, 28),
       hubMat,
     );
     hub.castShadow = true;
@@ -93,28 +93,28 @@ export class Crane {
 
     // 위 — 케이블 브래킷 (작은 실린더)
     const bracket = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.048, 0.058, 0.04, 18),
+      new THREE.CylinderGeometry(0.055, 0.068, 0.045, 18),
       bracketMat,
     );
-    bracket.position.y = 0.085;
+    bracket.position.y = 0.092;
     bracket.castShadow = true;
     headGroup.add(bracket);
 
     // 케이블 고리 (torus)
     const cableEye = new THREE.Mesh(
-      new THREE.TorusGeometry(0.024, 0.008, 10, 18),
+      new THREE.TorusGeometry(0.026, 0.008, 10, 18),
       hubMat,
     );
-    cableEye.position.y = 0.115;
+    cableEye.position.y = 0.125;
     cableEye.rotation.x = Math.PI / 2;
     headGroup.add(cableEye);
 
     // hub 아래 — 회전축 디스크 (4개 finger 가 매달리는 베이스)
     const hingeRing = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.105, 0.085, 0.04, 28),
+      new THREE.CylinderGeometry(0.135, 0.115, 0.04, 28),
       bracketMat,
     );
-    hingeRing.position.y = -0.085;
+    hingeRing.position.y = -0.090;
     hingeRing.castShadow = true;
     headGroup.add(hingeRing);
 
@@ -130,14 +130,14 @@ export class Crane {
       roughness: 0.15,
     });
 
-    // 곡선 — pivot local 에서 (0,0,0) 부터 (0.07, -0.30, 0) 까지 J자 형태로.
-    // 위쪽은 거의 수직, 끝부분만 +X(바깥) 방향으로 휘어지는 후크.
+    // 곡선 — pivot local 에서 (0,0,0) 부터 (0.10, -0.30, 0) 까지 J자 형태로.
+    // 위쪽은 거의 수직, 끝부분이 바깥쪽으로 크게 휘어지는 후크 — 실제 아케이드 클로 외형
     const curve = new THREE.QuadraticBezierCurve3(
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, -0.22, 0),     // 컨트롤: 거의 수직 하강
-      new THREE.Vector3(0.07, -0.30, 0),  // 끝: 바깥쪽으로 휘어짐
+      new THREE.Vector3(0, -0.22, 0),
+      new THREE.Vector3(0.10, -0.30, 0),
     );
-    const fingerGeo = new THREE.TubeGeometry(curve, 28, 0.018, 10, false);
+    const fingerGeo = new THREE.TubeGeometry(curve, 28, 0.019, 10, false);
 
     const fingerCount = 4;
     for (let i = 0; i < fingerCount; i++) {
@@ -145,15 +145,15 @@ export class Crane {
 
       // 방사 배치 pivot — hub 아래에 매달림
       const radialPivot = new THREE.Group();
-      radialPivot.position.set(0, -0.10, 0);
+      radialPivot.position.set(0, -0.105, 0);
       radialPivot.rotation.y = angle;
 
       // 열기/닫기 swing pivot — rotation.z 로 안/밖으로 흔들림
       const swingPivot = new THREE.Group();
-      swingPivot.position.set(0.085, 0.005, 0);
+      swingPivot.position.set(0.115, 0.005, 0);
 
       // 힌지 볼트
-      const bolt = new THREE.Mesh(new THREE.SphereGeometry(0.014, 14, 14), boltMat);
+      const bolt = new THREE.Mesh(new THREE.SphereGeometry(0.016, 14, 14), boltMat);
       swingPivot.add(bolt);
 
       // 곡선 후크
@@ -274,14 +274,15 @@ export class Crane {
   async grab(cabinetChute: { x: number; z: number }): Promise<GrabResult> {
     if (this.state !== 'idle') return { inst: null, success: false, hadCandidate: false };
 
-    // 1) descend — 스마트 디센드: 인형이 있으면 그 위에서 멈춤, 없으면 bottomY 까지
+    // 1) descend — 스마트 디센드: 인형이 있으면 인형 중심까지 내려감, 없으면 bottomY 까지
     this.setState('descend');
     const preTarget = this.dolls.findClosestUnder(this.target.x, this.target.z, SUCCESS.gripRadius);
     let descendY = CRANE.bottomY;
     if (preTarget) {
-      // 인형 상단 + clawReach 만큼 위 (= 닫힌 finger 끝이 인형 상단에 닿는 높이)
-      const dollTop = preTarget.body.position.y + preTarget.halfExtents.y;
-      descendY = Math.max(CRANE.bottomY, dollTop + CRANE.clawReach);
+      // 닫힌 finger 끝이 인형 중심(가운데 높이) 에 닿도록 내려감
+      // → 시각적으로 finger 가 인형의 중간을 감싸 안는 모션
+      const dollCenter = preTarget.body.position.y;
+      descendY = Math.max(CRANE.bottomY, dollCenter + CRANE.clawReach);
     }
     // 거리에 비례해 시간을 줄여 일정한 속도감
     const fullDist = CRANE.topY - CRANE.bottomY;
