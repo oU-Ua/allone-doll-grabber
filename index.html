@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>올원뱅크 인형뽑기</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Jua&family=Gaegu:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas"></canvas>
+
+      <div id="hud" class="hud">
+        <div class="hud-top-left">
+          <div class="plays-counter">
+            <span class="label">오늘의 남은 기회</span>
+            <span class="value"><span id="plays-remaining">3</span>/<span id="plays-max">3</span></span>
+            <button id="btn-refill" class="refill-btn" title="테스트용 리필">🔄 리필</button>
+          </div>
+          <div id="status" class="status">크레인 대기 중</div>
+        </div>
+
+        <div class="hud-top-right">
+          <button id="btn-collection" class="icon-btn" title="컬렉션">📇</button>
+          <button id="btn-settings" class="icon-btn" title="설정">⚙️</button>
+          <button id="btn-help" class="icon-btn" title="도움말">?</button>
+        </div>
+
+        <div class="hud-bottom-left">
+          <div class="camera-presets">
+            <button data-cam="front" class="cam-btn active">전방</button>
+            <button data-cam="side" class="cam-btn">측면</button>
+            <button data-cam="top" class="cam-btn">상단</button>
+            <button data-cam="diagonal" class="cam-btn">대각선</button>
+          </div>
+          <div class="camera-extras">
+            <button id="btn-auto-rotate" class="cam-btn">자동회전</button>
+            <button id="btn-cam-save" class="cam-btn" title="현재 카메라 위치를 저장">💾 내 앵글 저장</button>
+            <button id="btn-cam-load" class="cam-btn" title="저장한 앵글로 이동" disabled>📂 내 앵글</button>
+          </div>
+        </div>
+
+        <div class="hud-bottom-center">
+          <button id="btn-grab" class="grab-btn">잡기</button>
+        </div>
+
+        <div id="dpad" class="dpad">
+          <button class="dpad-btn dpad-up" data-dir="up" aria-label="앞으로">▲</button>
+          <button class="dpad-btn dpad-left" data-dir="left" aria-label="왼쪽">◀</button>
+          <button class="dpad-btn dpad-right" data-dir="right" aria-label="오른쪽">▶</button>
+          <button class="dpad-btn dpad-down" data-dir="down" aria-label="뒤로">▼</button>
+        </div>
+      </div>
+
+      <div id="reward-modal" class="modal hidden">
+        <div class="modal-card">
+          <button class="modal-close reward-close-x" data-close="reward-modal">✕</button>
+          <h2 id="reward-title">🎉 성공!</h2>
+          <div id="reward-doll" class="reward-doll"></div>
+          <p id="reward-message">새로운 인형 카드를 획득했어요</p>
+          <div class="reward-choice">
+            <button id="reward-points" class="reward-btn primary">올원뱅크 포인트 받기</button>
+            <button id="reward-ticket" class="reward-btn">경품 응모권 받기</button>
+          </div>
+          <div id="reward-after" class="reward-after hidden">
+            <button id="reward-go-app" class="reward-btn primary">📱 올원뱅크 앱으로 이동</button>
+          </div>
+          <div id="reward-timer" class="reward-timer">30</div>
+        </div>
+      </div>
+
+      <div id="fail-toast" class="toast hidden">아쉬워요... 다시 도전!</div>
+
+      <div id="inventory-modal" class="modal hidden">
+        <div class="modal-card collection-card">
+          <div class="collection-header">
+            <h2>📇 내 정보</h2>
+            <button class="modal-close" data-close="inventory-modal">✕</button>
+          </div>
+
+          <div class="inventory-tabs">
+            <button class="inv-tab active" data-tab="cards">카드</button>
+            <button class="inv-tab" data-tab="tickets">응모권<span id="badge-tickets" class="tab-badge hidden">0</span></button>
+            <button class="inv-tab" data-tab="missions">미션<span id="badge-missions" class="tab-badge hidden">0</span></button>
+            <button class="inv-tab" data-tab="achievements">성취</button>
+            <button class="inv-tab" data-tab="referral">초대</button>
+          </div>
+
+          <div class="inv-panel" data-panel="cards">
+            <div class="collection-filters">
+              <button class="filter-btn active" data-filter="all">전체</button>
+              <button class="filter-btn" data-filter="N">노말</button>
+              <button class="filter-btn" data-filter="R">레어</button>
+              <button class="filter-btn" data-filter="SR">슈퍼레어</button>
+              <button class="filter-btn" data-filter="HR">하이퍼레어</button>
+            </div>
+            <div class="collection-filters">
+              <button class="filter-btn active" data-cat="all">모든 카테고리</button>
+              <button class="filter-btn" data-cat="daily">일상</button>
+              <button class="filter-btn" data-cat="season">계절</button>
+              <button class="filter-btn" data-cat="fashion">패션</button>
+              <button class="filter-btn" data-cat="fantasy">판타지</button>
+            </div>
+            <div class="collection-filters sort-row">
+              <span class="sort-label">정렬:</span>
+              <button class="filter-btn active" data-sort="recent">획득순</button>
+              <button class="filter-btn" data-sort="rarity">등급순</button>
+              <button class="filter-btn" data-sort="category">카테고리</button>
+            </div>
+            <div id="collection-grid" class="collection-grid"></div>
+            <div id="collection-progress" class="collection-progress"></div>
+          </div>
+
+          <div class="inv-panel hidden" data-panel="tickets">
+            <div id="tickets-list" class="tickets-list"></div>
+            <div class="settings-hint">응모권 추첨은 즉시 결과가 나오며, 당첨 시 배송 주소를 입력하면 추적 번호가 발급됩니다.</div>
+          </div>
+
+          <div class="inv-panel hidden" data-panel="missions">
+            <div id="missions-list" class="missions-list"></div>
+          </div>
+
+          <div class="inv-panel hidden" data-panel="achievements">
+            <div id="achievements-grid" class="achievements-grid"></div>
+            <div id="achievements-progress" class="collection-progress"></div>
+          </div>
+
+          <div class="inv-panel hidden" data-panel="referral">
+            <div class="referral-card">
+              <div class="referral-label">내 초대 링크</div>
+              <div id="referral-url" class="referral-url"></div>
+              <div class="referral-actions">
+                <button id="btn-share" class="reward-btn primary">📤 공유하기</button>
+                <button id="btn-copy" class="reward-btn">📋 링크 복사</button>
+              </div>
+              <div id="referral-stats" class="referral-stats"></div>
+              <button id="btn-simulate-invite" class="reward-btn refill-cta">🧪 친구 초대 시뮬레이션 (테스트)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="address-modal" class="modal hidden">
+        <div class="modal-card">
+          <div class="collection-header">
+            <h2>🚚 배송 주소</h2>
+            <button class="modal-close" data-close="address-modal">✕</button>
+          </div>
+          <p id="address-prize" class="address-prize"></p>
+          <input id="address-input" class="address-input" placeholder="배송 받을 주소 (예: 서울시 강남구 ...)" />
+          <button id="btn-save-address" class="reward-btn primary">주소 저장하기</button>
+          <div class="settings-hint">💡 실제 배송은 올원뱅크 앱에서 추적 가능합니다. (mock)</div>
+        </div>
+      </div>
+
+      <div id="link-modal" class="modal hidden">
+        <div class="modal-card">
+          <h2>🔗 올원뱅크 앱 연동</h2>
+          <div id="link-body"></div>
+        </div>
+      </div>
+
+      <div id="settings-modal" class="modal hidden">
+        <div class="modal-card">
+          <div class="collection-header">
+            <h2>⚙️ 설정</h2>
+            <button class="modal-close" data-close="settings-modal">✕</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label">사운드</div>
+            <button id="btn-mute" class="reward-btn settings-toggle">🔊 켜짐</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label">난이도</div>
+            <div class="settings-options" data-group="difficulty">
+              <button class="settings-opt" data-difficulty="easy">쉬움</button>
+              <button class="settings-opt active" data-difficulty="normal">보통</button>
+              <button class="settings-opt" data-difficulty="hard">어려움</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label">테마</div>
+            <div class="settings-options theme-options" data-group="theme">
+              <button class="settings-opt active" data-theme="candy">🍬 캔디 팝</button>
+              <button class="settings-opt" data-theme="starry">🌌 별밤 픽셀</button>
+              <button class="settings-opt" data-theme="mint">🍵 민트 크림</button>
+              <button class="settings-opt" data-theme="lavender">💜 라벤더</button>
+            </div>
+          </div>
+
+          <div class="settings-hint">
+            난이도와 테마는 자동으로 저장됩니다. <br/>
+            그립 반경(초록 링)은 난이도에 따라 달라져요.
+          </div>
+        </div>
+      </div>
+
+      <div id="tutorial-modal" class="modal hidden">
+        <div class="modal-card">
+          <h2>👋 처음이시군요!</h2>
+          <ul class="tutorial-list">
+            <li>🎮 화면 우측 <b>D-pad</b> 또는 키보드 <b>방향키 / WASD</b> 로 크레인 이동</li>
+            <li>🖱️ 또는 화면을 <b>드래그</b> 해서 직접 조준할 수도 있어요</li>
+            <li>🎯 바닥의 <b>초록 링</b> 안에 인형이 들어왔을 때만 잡힙니다</li>
+            <li>🤏 <b>잡기 버튼</b> (또는 Space 키) 으로 집어 올리세요</li>
+            <li>📸 카메라 앵글을 바꿔가며 플레이해보세요</li>
+            <li>🏆 인형을 모아 카드 컬렉션을 완성하세요</li>
+          </ul>
+          <button id="tutorial-close" class="reward-btn primary">시작하기</button>
+        </div>
+      </div>
+
+      <div id="brand" class="brand">
+        <div class="brand-line">올원</div>
+        <div class="brand-title">CRANE FEVER</div>
+      </div>
+
+      <div id="theme-fade" class="theme-fade"></div>
+
+      <div id="loading" class="loading">
+        <div class="loading-stars">⭐ ✨ ⭐</div>
+        <div class="loading-text">인형 불러오는 중...</div>
+        <div id="loading-tip" class="loading-tip">💡 <strong>TIP</strong> — 잠시만 기다려주세요</div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.vite/
+.vercel/
+.vercel
+.claude/
+tsconfig.tsbuildinfo
+gh.zip
+gh_*_macOS_arm64/
