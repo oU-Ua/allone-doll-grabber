@@ -19,6 +19,9 @@ export class Cabinet {
   readonly chuteZ: number;
   readonly chuteRadius: number;
 
+  /** Prize Out 도어 전면(외부) world 좌표 — Game 의 prize-out 애니메이션이 사용 */
+  readonly prizeOutFront!: { x: number; y: number; z: number };
+
   private frameMat!: THREE.MeshStandardMaterial;
   private glassMat!: THREE.MeshPhysicalMaterial;
   private topCapMat!: THREE.MeshStandardMaterial;
@@ -119,37 +122,16 @@ export class Cabinet {
       this.group.add(m);
     }
 
-    // ── 상단 마키 (브랜드 라벨 색) ──
-    const marqueeH = 0.34;
+    // ── 상단 캡 (단순 크림 솔리드 — 브랜드 마키 제거) ──
     const marqueeW = wallW + postW * 2;
-    const marqueeBox = new THREE.Mesh(
-      new THREE.BoxGeometry(marqueeW, marqueeH, marqueeW),
-      this.topCapMat,
-    );
-    marqueeBox.position.y = h + marqueeH / 2;
-    marqueeBox.castShadow = true;
-    this.group.add(marqueeBox);
-
-    // 마키 전면 라벨 (CanvasTexture 로 텍스트 렌더)
-    const marqueePanel = new THREE.Mesh(
-      new THREE.PlaneGeometry(marqueeW * 0.92, marqueeH * 0.78),
-      new THREE.MeshStandardMaterial({
-        map: this.makeMarqueeTexture(),
-        transparent: true,
-        roughness: 0.6,
-      }),
-    );
-    marqueePanel.position.set(0, h + marqueeH / 2, marqueeW / 2 + 0.001);
-    this.group.add(marqueePanel);
-
-    // ── 상단 유리 위 화이트 캡 (마키 아래) ──
-    const capH = 0.04;
+    const capH = 0.18;
     const cap = new THREE.Mesh(
       new THREE.BoxGeometry(marqueeW, capH, marqueeW),
       cabinetMat,
     );
     cap.position.y = h + capH / 2;
     cap.castShadow = true;
+    cap.receiveShadow = true;
     this.group.add(cap);
 
     // ── 받침대 (Base) — 컨트롤 패널이 있는 하부 ──
@@ -239,53 +221,54 @@ export class Cabinet {
     coinSlotHole.position.set(0.30, -0.03, baseSide / 2 + 0.005);
     this.group.add(coinSlotHole);
 
-    // ── Prize Out 도어 (받침대 전면 하단) ──
-    const doorW = wallW * 0.55;
+    // ── Prize Out 도어 (받침대 전면, 실제 chute 와 동일한 x 위치에 정렬) ──
+    const doorW = 0.55;
     const doorH = 0.34;
     const doorY = -baseH + doorH / 2 + 0.10;
+    const doorX = this.chuteX; // chute 와 정렬
+    const doorZ = baseSide / 2;
+
     const doorPlate = new THREE.Mesh(
       new THREE.BoxGeometry(doorW, doorH, 0.02),
-      new THREE.MeshStandardMaterial({ color: 0x4a3850, roughness: 0.55, metalness: 0.2 }),
+      new THREE.MeshStandardMaterial({ color: 0x342438, roughness: 0.55, metalness: 0.2 }),
     );
-    doorPlate.position.set(0, doorY, baseSide / 2 + 0.001);
+    doorPlate.position.set(doorX, doorY, doorZ + 0.001);
     this.group.add(doorPlate);
 
     // 도어 라벨 (Prize Out)
     const doorLabel = new THREE.Mesh(
-      new THREE.PlaneGeometry(doorW * 0.8, doorH * 0.32),
+      new THREE.PlaneGeometry(doorW * 0.8, doorH * 0.30),
       new THREE.MeshStandardMaterial({
         map: this.makeDoorTexture(),
         transparent: true,
       }),
     );
-    doorLabel.position.set(0, doorY + doorH * 0.28, baseSide / 2 + 0.012);
+    doorLabel.position.set(doorX, doorY + doorH * 0.28, doorZ + 0.012);
     this.group.add(doorLabel);
 
-    // 도어 프레임 (얇은 액센트 컬러 테두리)
+    // 도어 프레임
     const doorFrame = new THREE.Mesh(
       new THREE.BoxGeometry(doorW + 0.04, doorH + 0.04, 0.012),
       this.frameMat,
     );
-    doorFrame.position.set(0, doorY, baseSide / 2 + 0.005);
+    doorFrame.position.set(doorX, doorY, doorZ + 0.005);
     this.group.add(doorFrame);
 
-    // ── 바닥 (인형이 굴러다니는 표면) ──
-    const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x161826,
-      metalness: 0.2,
-      roughness: 0.7,
-    });
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(wallW, wallW, 16, 16), floorMat);
+    // Prize Out 인형 등장 좌표 (도어 전면에 살짝 튀어나온 위치)
+    (this as { prizeOutFront: { x: number; y: number; z: number } }).prizeOutFront = {
+      x: doorX,
+      y: doorY,
+      z: doorZ + 0.18,
+    };
+
+    // ── 바닥 (인형이 굴러다니는 표면) — 크림 솔리드 (뒷벽과 동일) ──
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallW, wallW, 1, 1),
+      cabinetMat,
+    );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.group.add(floor);
-
-    // 바닥 격자 라인 (조작 범위 시각화)
-    const grid = new THREE.GridHelper(wallW, 8, 0x4ea1ff, 0x2a2e44);
-    grid.position.y = 0.001;
-    (grid.material as THREE.Material).transparent = true;
-    (grid.material as THREE.Material).opacity = 0.32;
-    this.group.add(grid);
 
     // 배출구 시각 (노란 링 + 어두운 구멍)
     const chuteRing = new THREE.Mesh(
@@ -308,44 +291,6 @@ export class Cabinet {
     hole.rotation.x = -Math.PI / 2;
     hole.position.set(this.chuteX, 0.002, this.chuteZ);
     this.group.add(hole);
-  }
-
-  /** 마키에 들어갈 브랜드 라벨 캔버스 텍스처 (CanvasTexture) */
-  private makeMarqueeTexture(): THREE.Texture {
-    const c = document.createElement('canvas');
-    c.width = 1024;
-    c.height = 256;
-    const ctx = c.getContext('2d')!;
-    // 배경
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-    ctx.fillRect(0, 0, 1024, 256);
-    // 점선 별 데코
-    ctx.fillStyle = '#ffd23f';
-    for (let i = 0; i < 14; i++) {
-      const x = 50 + i * 70;
-      ctx.beginPath();
-      const r = 6;
-      ctx.arc(x, 30, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.font = 'bold 110px "Jua", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    // 그림자
-    ctx.fillStyle = '#2a1a40';
-    ctx.fillText('올원', 280, 150);
-    ctx.fillText('CRANE', 600, 150);
-    ctx.fillText('FEVER', 870, 150);
-    // 본체
-    ctx.fillStyle = '#ff4f99';
-    ctx.fillText('올원', 274, 144);
-    ctx.fillStyle = '#ffd23f';
-    ctx.fillText('CRANE', 594, 144);
-    ctx.fillStyle = '#88c0ff';
-    ctx.fillText('FEVER', 864, 144);
-    const tex = new THREE.CanvasTexture(c);
-    tex.needsUpdate = true;
-    return tex;
   }
 
   /** "Prize Out" 도어 라벨 텍스처 */

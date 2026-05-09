@@ -223,9 +223,9 @@ export class Game {
     const result = await this.crane.grab({ x: this.cabinet.chuteX, z: this.cabinet.chuteZ });
     if (result.success && result.inst) {
       const dollId = result.inst.def.id;
-      const at = new THREE.Vector3(this.cabinet.chuteX, 0.4, this.cabinet.chuteZ);
-      this.particles.burstSuccess(at);
       sounds.success();
+      // chute → Prize Out 도어 애니메이션 (인형이 도어 앞으로 등장)
+      await this.animatePrizeOut(result.inst);
       this.dolls.remove(result.inst);
       if (this.dolls.instances.length < 3) {
         this.dolls.spawn(6);
@@ -254,6 +254,49 @@ export class Game {
   }
 
   /**
+   * 인형이 chute 로 떨어진 뒤 Prize Out 도어로 등장하는 애니메이션.
+   *  1) 짧게 숨김 (chute 통과 효과)
+   *  2) 도어 앞으로 텔레포트 + 살짝 튀어나오는 모션
+   *  3) 사용자가 보도록 잠시 hold 후 제거(caller 가 처리)
+   */
+  private async animatePrizeOut(inst: import('./DollManager').DollInstance): Promise<void> {
+    // kinematic 으로 만들어 물리에서 분리, 일단 숨김
+    this.dolls.attach(inst);
+    inst.mesh.visible = false;
+    await sleep(220);
+
+    // Prize Out 도어 앞으로 등장
+    const target = this.cabinet.prizeOutFront;
+    inst.mesh.visible = true;
+    this.particles.burstSuccess(new THREE.Vector3(target.x, target.y + 0.05, target.z));
+    sounds.collect();
+
+    // 시작 위치는 도어 안쪽 (살짝 뒤), 끝 위치는 도어 바깥(0.18 앞)
+    const startZ = target.z - 0.20;
+    const endZ = target.z;
+    const dur = 600;
+    const t0 = performance.now();
+    await new Promise<void>((resolve) => {
+      const tick = () => {
+        const t = Math.min(1, (performance.now() - t0) / dur);
+        const e = 1 - Math.pow(1 - t, 3);
+        const z = startZ + (endZ - startZ) * e;
+        const yArc = Math.sin(t * Math.PI) * 0.08;
+        inst.body.position.set(target.x, target.y + yArc, z);
+        inst.body.quaternion.set(0, 0, 0, 1);
+        inst.mesh.position.set(target.x, target.y + yArc, z);
+        inst.mesh.quaternion.set(0, 0, 0, 1);
+        if (t < 1) requestAnimationFrame(tick);
+        else resolve();
+      };
+      tick();
+    });
+
+    // 사용자가 인형을 보고 인지할 시간
+    await sleep(900);
+  }
+
+  /**
    * D-pad / 방향키로 크레인 평면 이동.
    * 사용자 요청에 따라 **카메라 앵글과 무관하게 월드 축에 고정**:
    *   sx: -1 = -x(좌), +1 = +x(우)
@@ -271,4 +314,8 @@ export class Game {
     this.renderer.setSize(width, height, false);
     this.cameraRig.resize(width, height);
   };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise<void>((r) => setTimeout(r, ms));
 }
