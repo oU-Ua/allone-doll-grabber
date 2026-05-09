@@ -28,10 +28,8 @@ export class Crane {
   state: CraneState = 'idle';
 
   private headMesh!: THREE.Object3D;
-  /** 각 finger 의 상단 segment(어깨에서 분기) */
-  private fingerUpper: THREE.Group[] = [];
-  /** 각 finger 의 하단 segment(끝부분, 인형 감쌈) */
-  private fingerLower: THREE.Group[] = [];
+  /** 각 finger 의 swing pivot (열기/닫기 회전 적용 대상) */
+  private fingerSwings: THREE.Group[] = [];
   private cable!: THREE.Mesh;
   private railX!: THREE.Mesh;
   private railZ!: THREE.Mesh;
@@ -71,105 +69,102 @@ export class Crane {
     );
     this.group.add(this.cable);
 
-    // 크레인 헤드 (hub) + 2-마디 클로
+    // 크레인 헤드 (hub) + 4-갈고리 클로 (실제 아케이드 클로머신 디자인)
     const headGroup = new THREE.Group();
 
-    // 핑크 메탈 hub — 위가 좁고 아래가 살짝 넓은 사다리꼴
+    const hubMat = new THREE.MeshStandardMaterial({
+      color: 0xc8ccd6,
+      metalness: 0.85,
+      roughness: 0.25,
+    });
+    const bracketMat = new THREE.MeshStandardMaterial({
+      color: 0x9ba0ad,
+      metalness: 0.85,
+      roughness: 0.3,
+    });
+
+    // ── Hub: 실린더 본체 ──
     const hub = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.085, 0.115, 0.12, 24),
-      new THREE.MeshStandardMaterial({ color: 0xff5fa2, metalness: 0.7, roughness: 0.3, emissive: 0x331122 }),
+      new THREE.CylinderGeometry(0.085, 0.10, 0.13, 28),
+      hubMat,
     );
     hub.castShadow = true;
     headGroup.add(hub);
 
-    // 케이블 어댑터 — hub 위쪽 노란 노브
-    const knob = new THREE.Mesh(
-      new THREE.SphereGeometry(0.05, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xffd23f, metalness: 0.6, roughness: 0.3, emissive: 0x332200 }),
+    // 위 — 케이블 브래킷 (작은 실린더)
+    const bracket = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.048, 0.058, 0.04, 18),
+      bracketMat,
     );
-    knob.position.y = 0.085;
-    headGroup.add(knob);
+    bracket.position.y = 0.085;
+    bracket.castShadow = true;
+    headGroup.add(bracket);
 
-    // hub 아래쪽 회전축 디스크 (집게 베이스)
-    const baseDisc = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.105, 0.085, 0.04, 24),
-      new THREE.MeshStandardMaterial({ color: 0x9ba0ad, metalness: 0.85, roughness: 0.3 }),
+    // 케이블 고리 (torus)
+    const cableEye = new THREE.Mesh(
+      new THREE.TorusGeometry(0.024, 0.008, 10, 18),
+      hubMat,
     );
-    baseDisc.position.y = -0.07;
-    baseDisc.castShadow = true;
-    headGroup.add(baseDisc);
+    cableEye.position.y = 0.115;
+    cableEye.rotation.x = Math.PI / 2;
+    headGroup.add(cableEye);
 
-    // ── 3개 finger : 2-segment articulated arms (실제 클로머신 집게 형태) ──
-    const metalMat = new THREE.MeshStandardMaterial({
+    // hub 아래 — 회전축 디스크 (4개 finger 가 매달리는 베이스)
+    const hingeRing = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.105, 0.085, 0.04, 28),
+      bracketMat,
+    );
+    hingeRing.position.y = -0.085;
+    hingeRing.castShadow = true;
+    headGroup.add(hingeRing);
+
+    // ── 4개 곡선 후크 finger (TubeGeometry — J자형) ──
+    const fingerMat = new THREE.MeshStandardMaterial({
       color: 0xd4d8e0,
       metalness: 0.9,
-      roughness: 0.2,
+      roughness: 0.18,
     });
-    const tipMat = new THREE.MeshStandardMaterial({
-      color: 0x6c707d,
-      metalness: 0.95,
+    const boltMat = new THREE.MeshStandardMaterial({
+      color: 0x4a4f5d,
+      metalness: 0.9,
       roughness: 0.15,
     });
 
-    const fingerCount = 3;
-    const upperLen = 0.18;
-    const lowerLen = 0.13;
-    const tipLen = 0.05;
+    // 곡선 — pivot local 에서 (0,0,0) 부터 (0.07, -0.30, 0) 까지 J자 형태로.
+    // 위쪽은 거의 수직, 끝부분만 +X(바깥) 방향으로 휘어지는 후크.
+    const curve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, -0.22, 0),     // 컨트롤: 거의 수직 하강
+      new THREE.Vector3(0.07, -0.30, 0),  // 끝: 바깥쪽으로 휘어짐
+    );
+    const fingerGeo = new THREE.TubeGeometry(curve, 28, 0.018, 10, false);
 
+    const fingerCount = 4;
     for (let i = 0; i < fingerCount; i++) {
       const angle = (i / fingerCount) * Math.PI * 2;
 
-      // pivot — hub 아래 baseDisc 에서 분기. y회전으로 방사 배치 (3등분).
-      const pivot = new THREE.Group();
-      pivot.position.set(0, -0.09, 0);
-      pivot.rotation.y = angle;
+      // 방사 배치 pivot — hub 아래에 매달림
+      const radialPivot = new THREE.Group();
+      radialPivot.position.set(0, -0.10, 0);
+      radialPivot.rotation.y = angle;
 
-      // 어깨 관절 디스크 (hinge 표현)
-      const shoulder = new THREE.Mesh(
-        new THREE.SphereGeometry(0.022, 12, 12),
-        tipMat,
-      );
-      pivot.add(shoulder);
+      // 열기/닫기 swing pivot — rotation.z 로 안/밖으로 흔들림
+      const swingPivot = new THREE.Group();
+      swingPivot.position.set(0.085, 0.005, 0);
 
-      // 상단 segment — pivot 의 +Z 방향으로 살짝 밀고, 아래로 길게 뻗는 박스
-      const upperGroup = new THREE.Group();
-      // 어깨에서 약간 옆으로 나간 위치에 시작 (radial)
-      upperGroup.position.set(0, 0, 0.038);
-      const upperMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.034, upperLen, 0.05),
-        metalMat,
-      );
-      upperMesh.position.y = -upperLen / 2;
-      upperMesh.castShadow = true;
-      upperGroup.add(upperMesh);
+      // 힌지 볼트
+      const bolt = new THREE.Mesh(new THREE.SphereGeometry(0.014, 14, 14), boltMat);
+      swingPivot.add(bolt);
 
-      // 하단 segment — 상단 끝에 hinge 로 연결
-      const lowerGroup = new THREE.Group();
-      lowerGroup.position.y = -upperLen;
+      // 곡선 후크
+      const finger = new THREE.Mesh(fingerGeo, fingerMat);
+      finger.castShadow = true;
+      swingPivot.add(finger);
 
-      const lowerMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.03, lowerLen, 0.04),
-        metalMat,
-      );
-      lowerMesh.position.y = -lowerLen / 2;
-      lowerMesh.castShadow = true;
-      lowerGroup.add(lowerMesh);
+      radialPivot.add(swingPivot);
+      headGroup.add(radialPivot);
 
-      // 끝 부분 — 안쪽으로 휘어진 뾰족한 갈고리 (cone 으로)
-      const tip = new THREE.Mesh(
-        new THREE.ConeGeometry(0.028, tipLen, 8),
-        tipMat,
-      );
-      tip.rotation.x = Math.PI; // 아래로 뾰족
-      tip.position.y = -lowerLen - tipLen / 2 + 0.01;
-      lowerGroup.add(tip);
-
-      upperGroup.add(lowerGroup);
-      pivot.add(upperGroup);
-      headGroup.add(pivot);
-
-      this.fingerUpper.push(upperGroup);
-      this.fingerLower.push(lowerGroup);
+      this.fingerSwings.push(swingPivot);
     }
 
     this.headMesh = headGroup;
@@ -244,14 +239,12 @@ export class Crane {
     this.cable.scale.y = cableLen;
     this.cable.position.set(this.head.x, this.head.y + cableLen / 2, this.head.z);
 
-    // 2-마디 finger 애니메이션
-    //   close=0 (열림): 어깨 관절 바깥쪽으로 0.45rad, 끝마디 직선
-    //   close=1 (닫힘): 어깨 관절 직립, 끝마디 안쪽으로 0.7rad 휘어짐 (J자형 grip)
-    const upperAngle = (1 - this.clawClose) * 0.45; // 양수 → 바깥(+z) 방향으로 기울어짐
-    const lowerAngle = -this.clawClose * 0.75;       // 음수 → 안쪽으로 휨
-    for (let i = 0; i < this.fingerUpper.length; i++) {
-      this.fingerUpper[i].rotation.x = upperAngle;
-      this.fingerLower[i].rotation.x = lowerAngle;
+    // 4-갈고리 swing 애니메이션
+    //   close=0 (열림): pivot.rotation.z = +0.42 → finger 가 바깥으로 펼쳐짐 (꽃 피듯)
+    //   close=1 (닫힘): pivot.rotation.z = -0.40 → finger 가 안으로 모임 (그립)
+    const swingAngle = 0.42 - this.clawClose * 0.82;
+    for (const pivot of this.fingerSwings) {
+      pivot.rotation.z = swingAngle;
     }
 
     // 타겟 링 — idle 일 때만 표시, 잡기 가능 여부에 따라 색 변경
